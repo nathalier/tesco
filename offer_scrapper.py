@@ -32,7 +32,7 @@ def main(argv=None):
 		# close_btn = driver.find_element(By.CLASS_NAME, 'close-btn')
 		# close_btn.click()
 
-		result = []
+		result = {}
 		next_page = 1
 		while True:
 			driver.get(fav_url + '?page=' + str(next_page))
@@ -50,17 +50,22 @@ def main(argv=None):
 					offer_dates_str = offer.next_sibling.contents[0].replace('Offer valid for delivery from ', '')
 					price_str = item.find_next(attrs={"class": "value"}).contents[0]
 					# if offer_dates_str.startswith('21/11') or offer_dates_str.startswith('22/11'):
-					result.append((item['href'], item.contents[0], offer.contents[0],
-										offer_dates_str, price_str))
+					item_code = re.search('/(\d+)$', item['href']).group(1)
+					if item_code:
+						result[item_code] = (item.contents[0], offer.contents[0],
+										offer_dates_str, price_str)
 			next_page += 1
+			break
 		driver.quit()
 
-		result.sort(key=lambda x: x[2])
+		result = sorted(result.items())
 		with open('offers' + time.strftime("%Y%m%d_%H%M") + '.csv', 'w', encoding="utf8") as f:
 			for item in result:
-				f.write(item[2] + " ::: " + item[4] + " ::: " + item[3] +\
-						" ::: " + item[1] + " ::: " + item[0] + '\n')
+				f.write(item[1][1] + " ::: " + item[1][3] + " ::: " + item[1][2] +\
+						" ::: " + item[1][0] + " ::: " + item[0] + '\n')
 	except:
+		if driver:
+			driver.quit()
 		return sys.exc_info()
 
 if __name__ == '__main__':
