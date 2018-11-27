@@ -16,6 +16,37 @@ fav_trunc_url = '/groceries/en-GB/favorites?page='
 account = credentials.account
 passw = credentials.passw
 
+
+def calculate_disc(offer, price):
+	def norm(p):
+		if p[-1] == 'p':
+			return float(p[:-1]) / 100
+		else:
+			return float(p)
+
+	offer = offer.lower()
+	if re.search('any (\d) for (\d)', offer):
+		result = re.search('any (\d) for (\d)', offer)
+		q1, q2 = float(result.group(1)), float(result.group(2))
+		return 1 - q2 / q1
+	elif 'for' in offer:
+		result = re.search('(\d+) for £?(\d+(\.\d+|p))', offer)
+		if result:
+			quantity = int(result.group(1))
+			total_price = result.group(2)
+			price_per_item = norm(total_price) / quantity
+			return round(1 - price_per_item / float(price), 2)
+	elif re.search('buy (\d) get (\d) free', offer):
+		result = re.search('buy (\d) get (\d) free', offer)
+		q1, q2 = float(result.group(1)), float(result.group(2))
+		return 1 - q1/(q1 + q2)
+	elif re.search('was.*now', offer):
+		old_price = norm(re.search('was £?(\d+(\.\d+|p))', offer).group(1))
+		new_price = norm(re.search('now £?(\d+(\.\d+|p))', offer).group(1))
+		return round(1 - new_price / old_price, 2)
+	else:
+		return
+
 def main(argv=None):
 	try:
 		# if argv is None:
@@ -50,19 +81,19 @@ def main(argv=None):
 					offer_dates_str = offer.next_sibling.contents[0].replace('Offer valid for delivery from ', '')
 					price_str = item.find_next(attrs={"class": "value"}).contents[0]
 					# if offer_dates_str.startswith('21/11') or offer_dates_str.startswith('22/11'):
+					discount = calculate_disc(offer.contents[0], price_str)
 					item_code = re.search('/(\d+)$', item['href']).group(1)
 					if item_code:
 						result[item_code] = (item.contents[0], offer.contents[0],
-										offer_dates_str, price_str)
+										offer_dates_str, price_str, str(discount))
 			next_page += 1
-			break
 		driver.quit()
 
-		result = sorted(result.items())
+		result = sorted(result.items(), key=lambda x: x[1][4], reverse=True)
 		with open('offers' + time.strftime("%Y%m%d_%H%M") + '.csv', 'w', encoding="utf8") as f:
 			for item in result:
-				f.write(item[1][1] + " ::: " + item[1][3] + " ::: " + item[1][2] +\
-						" ::: " + item[1][0] + " ::: " + item[0] + '\n')
+				f.write(item[1][4] + " ::: " + item[1][1] + " ::: " + item[1][3] + " ::: " +\
+						item[1][2] + " ::: " + item[1][0] + " ::: " + item[0] + '\n')
 	except:
 		if driver:
 			driver.quit()
