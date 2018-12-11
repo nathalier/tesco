@@ -1,8 +1,8 @@
 __author__ = 'Nathalie'
 
-
 import credentials
 import sys, time, re
+from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -48,10 +48,13 @@ def calculate_disc(offer, price):
 		return
 
 def main(argv=None):
+	if argv and len(argv) > 1:
+		try:
+			date_format = '%d/%m/%Y'
+			start_date = datetime.strptime(argv[1], date_format)
+		except:
+			start_date = None
 	try:
-		# if argv is None:
-		#     argv = sys.argv
-		# import_module(argv)
 		driver = webdriver.Firefox()
 		driver.get(login_url)
 		login_input = driver.find_element(By.ID, 'username')
@@ -79,8 +82,12 @@ def main(argv=None):
 				if offer_block:
 					offer = offer_block.find(attrs={"class": "offer-text"})
 					offer_dates_str = offer.next_sibling.contents[0].replace('Offer valid for delivery from ', '')
+					if start_date:
+						offer_start_date = datetime.strptime(re.match('(\d{2}/\d{2}/\d{4})', \
+															offer_dates_str).group(1), date_format)
+						if offer_start_date < start_date:
+							continue
 					price_str = item.find_next(attrs={"class": "value"}).contents[0]
-					# if offer_dates_str.startswith('21/11') or offer_dates_str.startswith('22/11'):
 					discount = calculate_disc(offer.contents[0], price_str)
 					item_code = re.search('/(\d+)$', item['href']).group(1)
 					if item_code:
@@ -90,7 +97,8 @@ def main(argv=None):
 		driver.quit()
 
 		result = sorted(result.items(), key=lambda x: x[1][4], reverse=True)
-		with open('offers' + time.strftime("%Y%m%d_%H%M") + '.csv', 'w', encoding="utf8") as f:
+		new = '' if not start_date else '_after_' + start_date.strftime("%d%m")
+		with open('offers' + time.strftime("%Y%m%d") + new + '.csv', 'w', encoding="utf8") as f:
 			for item in result:
 				f.write(item[1][4] + " ::: " + item[1][1] + " ::: " + item[1][3] + " ::: " +\
 						item[1][2] + " ::: " + item[1][0] + " ::: " + item[0] + '\n')
@@ -100,4 +108,4 @@ def main(argv=None):
 		return sys.exc_info()
 
 if __name__ == '__main__':
-	sys.exit(main())
+	sys.exit(main(sys.argv))
