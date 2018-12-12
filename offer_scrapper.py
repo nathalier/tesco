@@ -2,7 +2,7 @@ __author__ = 'Nathalie'
 
 import credentials
 import sys, time, re
-from datetime import datetime
+from datetime import datetime, timedelta
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -47,13 +47,18 @@ def calculate_disc(offer, price):
 	else:
 		return
 
+
 def main(argv=None):
+	date_format = '%d/%m/%Y'
 	if argv and len(argv) > 1:
 		try:
-			date_format = '%d/%m/%Y'
 			start_date = datetime.strptime(argv[1], date_format)
 		except:
-			start_date = None
+			pass
+	if not start_date:
+			start_date = datetime.today() - timedelta(days=5)
+	ending_soon_date = datetime.today() + timedelta(days=7)
+
 	try:
 		driver = webdriver.Firefox()
 		driver.get(login_url)
@@ -82,26 +87,45 @@ def main(argv=None):
 				if offer_block:
 					offer = offer_block.find(attrs={"class": "offer-text"})
 					offer_dates_str = offer.next_sibling.contents[0].replace('Offer valid for delivery from ', '')
-					if start_date:
-						offer_start_date = datetime.strptime(re.match('(\d{2}/\d{2}/\d{4})', \
-															offer_dates_str).group(1), date_format)
-						if offer_start_date < start_date:
-							continue
+					offer_start_date = datetime.strptime(re.match('(\d{2}/\d{2}/\d{4})',
+																offer_dates_str).group(1), date_format)
+					offer_end_date = datetime.strptime(re.search('until (\d{2}/\d{2}/\d{4})',
+																offer_dates_str).group(1), date_format)
 					price_str = item.find_next(attrs={"class": "value"}).contents[0]
 					discount = calculate_disc(offer.contents[0], price_str)
 					item_code = re.search('/(\d+)$', item['href']).group(1)
 					if item_code:
 						result[item_code] = (item.contents[0], offer.contents[0],
-										offer_dates_str, price_str, str(discount))
+										offer_dates_str, price_str, str(discount), offer_start_date, offer_end_date)
 			next_page += 1
 		driver.quit()
 
 		result = sorted(result.items(), key=lambda x: x[1][4], reverse=True)
-		new = '' if not start_date else '_after_' + start_date.strftime("%d%m")
-		with open('offers' + time.strftime("%Y%m%d") + new + '.csv', 'w', encoding="utf8") as f:
+		filename_prefix = 'offers' + time.strftime("%y%m%d")
+		all_suffix = '_all'
+		new_suffix = '_after_' + start_date.strftime("%m%d")
+		ending_suffix = '_ending'
+
+		def offer_to_str(item):
+			return item[1][4] + " ::: " + item[1][1] + " ::: " + item[1][3] + " ::: " + \
+					item[1][2] + " ::: " + item[1][0] + " ::: " + item[0] + '\n'
+
+		with open(filename_prefix + all_suffix + '.csv', 'w', encoding="utf8") as f:
 			for item in result:
-				f.write(item[1][4] + " ::: " + item[1][1] + " ::: " + item[1][3] + " ::: " +\
-						item[1][2] + " ::: " + item[1][0] + " ::: " + item[0] + '\n')
+				f.write(offer_to_str(item))
+
+		with open(filename_prefix + new_suffix + '.csv', 'w', encoding="utf8") as f:
+			for item in filter(lambda x: x[1][5] >= start_date, result):
+				f.write(offer_to_str(item))
+
+		with open(filename_prefix + ending_suffix + '.csv', 'w', encoding="utf8") as f:
+			for item in filter(lambda x: x[1][6] <= ending_soon_date, result):
+				f.write(offer_to_str(item))
+
+		with open(filename_prefix + new_suffix + '_or_' + ending_suffix + '.csv', 'w', encoding="utf8") as f:
+			for item in filter(lambda x: x[1][5] >= start_date or x[1][6] <= ending_soon_date, result):
+				f.write(offer_to_str(item))
+
 	except:
 		if driver:
 			driver.quit()
