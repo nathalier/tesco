@@ -17,53 +17,57 @@ account = credentials.account
 passw = credentials.passw
 
 
-def add_selected(file_list=None):
-	files = []
-	if file_list and len(file_list) > 1:
-		files.extend(file_list[1:])
-	files.extend(glob.glob('./offers' + time.strftime("%Y%m%d") + '*.csv'))
+def driver_login():
+	driver = webdriver.Firefox()
+	driver.get(login_url)
+	login_input = driver.find_element(By.ID, 'username')
+	login_input.send_keys(account)
+	login_passw = driver.find_element(By.ID, 'password')
+	login_passw.send_keys(passw)
+	login_passw.send_keys(Keys.ENTER)
+	time.sleep(3)
+	return driver
 
+
+def add_selected(file_list, driver):
+	for file_name in file_list:
+		with open(file_name) as f:
+			for line in f.readlines():
+				if line.startswith('+'):
+					url = product_base_url + re.search('::: (\d*)$', line).group(1)
+					driver.get(url)
+					try:
+						close_cookie_btn = driver.find_element(By.CLASS_NAME, 'cookie-policy__button')
+						close_cookie_btn.click()
+					except NoSuchElementException:
+						pass
+					# elem_to_scroll_to = driver.find_element(By.CLASS_NAME, 'write-a-review')
+					# ActionChains(driver).move_to_element(elem_to_scroll_to).perform()
+					# driver.execute_script("arguments[0].scrollIntoView();", elem_to_scroll_to)
+					# time.sleep(2)
+					try:
+						add_btn = driver.find_element(By.XPATH,\
+						'//*[contains(@class, "grocery-product")]//button[@type="submit" and //*[text() = "Add"]]')
+						add_btn.click()
+					except NoSuchElementException:
+						pass
+					except ElementNotInteractableException:
+						print('ElementNotInteractableException: ' + url)
+					time.sleep(1)
+
+
+if __name__ == '__main__':
 	try:
-		driver = webdriver.Firefox()
-		driver.get(login_url)
-		login_input = driver.find_element(By.ID, 'username')
-		login_input.send_keys(account)
-		login_passw = driver.find_element(By.ID, 'password')
-		login_passw.send_keys(passw)
-		login_passw.send_keys(Keys.ENTER)
-		time.sleep(3)
+		driver = driver_login()
 
-		for file_name in files:
-			with open(file_name) as f:
-				for line in f.readlines():
-					if line.startswith('+'):
-						url = product_base_url + re.search('::: (\d*)$', line).group(1)
-						driver.get(url)
-						try:
-							close_cookie_btn = driver.find_element(By.CLASS_NAME, 'cookie-policy__button')
-							close_cookie_btn.click()
-						except NoSuchElementException:
-							pass
-						# elem_to_scroll_to = driver.find_element(By.CLASS_NAME, 'write-a-review')
-						# ActionChains(driver).move_to_element(elem_to_scroll_to).perform()
-						# driver.execute_script("arguments[0].scrollIntoView();", elem_to_scroll_to)
-						# time.sleep(2)
-						try:
-							add_btn = driver.find_element(By.XPATH,\
-							'//*[contains(@class, "grocery-product")]//button[@type="submit" and //*[text() = "Add"]]')
-							add_btn.click()
-						except NoSuchElementException:
-							pass
-						except ElementNotInteractableException:
-							print('ElementNotInteractableException: ' + url)
-						time.sleep(1)
+		files = []
+		if len(sys.argv) > 1:
+			files.extend(sys.argv)
+		else:
+			files.extend(glob.glob('./offers' + time.strftime("%y%m%d") + '*.csv'))
 
+		add_selected(files, driver)
 		driver.quit()
-
 	except:
 		if driver:
 			driver.quit()
-		return sys.exc_info()
-
-if __name__ == '__main__':
-	sys.exit(add_selected(sys.argv[1:]))
