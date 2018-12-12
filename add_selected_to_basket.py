@@ -17,10 +17,10 @@ account = credentials.account
 passw = credentials.passw
 
 
-def main(argv=None):
+def add_selected(file_list=None):
 	files = []
-	if argv and len(argv) > 1:
-		files.extend(argv[1:])
+	if file_list and len(file_list) > 1:
+		files.extend(file_list[1:])
 	files.extend(glob.glob('./offers' + time.strftime("%Y%m%d") + '*.csv'))
 
 	try:
@@ -66,4 +66,4 @@ def main(argv=None):
 		return sys.exc_info()
 
 if __name__ == '__main__':
-	sys.exit(main(sys.argv))
+	sys.exit(add_selected(sys.argv[1:]))

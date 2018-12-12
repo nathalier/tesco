@@ -47,7 +47,7 @@ def calculate_disc(offer, price):
 		return
 
 
-def main(argv=None):
+def scrap(argv=None):
 	date_format = '%d/%m/%Y'
 	if argv and len(argv) > 1:
 		try:
@@ -129,4 +129,4 @@ def main(argv=None):
 		return sys.exc_info()
 
 if __name__ == '__main__':
-	sys.exit(main(sys.argv))
+	sys.exit(scrap(sys.argv))
