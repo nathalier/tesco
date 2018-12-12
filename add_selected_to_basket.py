@@ -32,8 +32,6 @@ def main(argv=None):
 		login_passw.send_keys(passw)
 		login_passw.send_keys(Keys.ENTER)
 		time.sleep(3)
-		# close_btn = driver.find_element(By.CLASS_NAME, 'close-btn')
-		# close_btn.click()
 
 		for file_name in files:
 			with open(file_name) as f:

@@ -7,7 +7,6 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from bs4 import BeautifulSoup
-from urllib.request import urlopen
 
 
 login_url = 'https://secure.tesco.com/account/en-GB/login?from=/'
@@ -68,8 +67,6 @@ def main(argv=None):
 		login_passw.send_keys(passw)
 		login_passw.send_keys(Keys.ENTER)
 		time.sleep(3)
-		# close_btn = driver.find_element(By.CLASS_NAME, 'close-btn')
-		# close_btn.click()
 
 		result = {}
 		next_page = 1
