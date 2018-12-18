@@ -1,8 +1,9 @@
 __author__ = 'Nathalie'
 
 import credentials
+from add_selected_to_basket import add_selected
 import sys, time, re
-from datetime import datetime, timedelta
+from datetime import datetime, date, timedelta
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -51,12 +52,12 @@ def scrap(argv=None):
 	date_format = '%d/%m/%Y'
 	if argv and len(argv) > 1:
 		try:
-			start_date = datetime.strptime(argv[1], date_format)
+			start_date = datetime.strptime(argv[1], date_format).date()
 		except:
 			pass
-	if not start_date:
-			start_date = datetime.today() - timedelta(days=5)
-	ending_soon_date = datetime.today() + timedelta(days=7)
+	if len(argv) <= 1 or not start_date:
+			start_date = date.today() - timedelta(days=5)
+	ending_soon_date = date.today() + timedelta(days=7)
 
 	try:
 		driver = webdriver.Firefox()
@@ -85,9 +86,9 @@ def scrap(argv=None):
 					offer = offer_block.find(attrs={"class": "offer-text"})
 					offer_dates_str = offer.next_sibling.contents[0].replace('Offer valid for delivery from ', '')
 					offer_start_date = datetime.strptime(re.match('(\d{2}/\d{2}/\d{4})',
-																offer_dates_str).group(1), date_format)
+																offer_dates_str).group(1), date_format).date()
 					offer_end_date = datetime.strptime(re.search('until (\d{2}/\d{2}/\d{4})',
-																offer_dates_str).group(1), date_format)
+																offer_dates_str).group(1), date_format).date()
 					price_str = item.find_next(attrs={"class": "value"}).contents[0]
 					discount = calculate_disc(offer.contents[0], price_str)
 					item_code = re.search('/(\d+)$', item['href']).group(1)
