@@ -24,28 +24,31 @@ def calculate_disc(offer, price):
 		else:
 			return float(p)
 
+	price = norm(price)
 	offer = offer.lower()
 	if re.search('any (\d) for (\d)', offer):
 		result = re.search('any (\d) for (\d)', offer)
 		q1, q2 = float(result.group(1)), float(result.group(2))
-		return 1 - q2 / q1
+		discount = 1 - q2 / q1
+		new_price = discount * price
+		return discount, new_price
 	elif 'for' in offer:
-		result = re.search('(\d+) for £?(\d+(\.\d+|p))', offer)
+		result = re.search('(\d+) for £?(\d+(\.\d+|p)?)', offer)
 		if result:
 			quantity = int(result.group(1))
 			total_price = result.group(2)
 			price_per_item = norm(total_price) / quantity
-			return round(1 - price_per_item / float(price), 2)
+			return round(1 - price_per_item / price, 2), price_per_item
 	elif re.search('buy (\d) get (\d) free', offer):
 		result = re.search('buy (\d) get (\d) free', offer)
 		q1, q2 = float(result.group(1)), float(result.group(2))
-		return 1 - q1/(q1 + q2)
+		discount = 1 - q1/(q1 + q2)
+		return discount, discount * price
 	elif re.search('was.*now', offer):
-		old_price = norm(re.search('was £?(\d+(\.\d+|p))', offer).group(1))
-		new_price = norm(re.search('now £?(\d+(\.\d+|p))', offer).group(1))
-		return round(1 - new_price / old_price, 2)
-	else:
-		return
+		old_price = norm(re.search('was £?(\d+(\.\d+|p)?)', offer).group(1))
+		new_price = norm(re.search('now £?(\d+(\.\d+|p)?)', offer).group(1))
+		return round(1 - new_price / old_price, 2), price
+	return None, price
 
 
 def scrap(argv=None):
@@ -90,7 +93,7 @@ def scrap(argv=None):
 					offer_end_date = datetime.strptime(re.search('until (\d{2}/\d{2}/\d{4})',
 																offer_dates_str).group(1), date_format).date()
 					price_str = item.find_next(attrs={"class": "value"}).contents[0]
-					discount = calculate_disc(offer.contents[0], price_str)
+					discount, _ = calculate_disc(offer.contents[0], price_str)
 					item_code = re.search('/(\d+)$', item['href']).group(1)
 					if item_code:
 						result[item_code] = (item.contents[0], offer.contents[0],
