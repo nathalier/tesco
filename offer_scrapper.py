@@ -21,6 +21,8 @@ def calculate_disc(offer, price):
 	def norm(p):
 		if p[-1] == 'p':
 			return float(p[:-1]) / 100
+		elif p[0] == '£':
+			return float(p[1:])
 		else:
 			return float(p)
 
@@ -99,7 +101,6 @@ def scrap(argv=None):
 						result[item_code] = (item.contents[0], offer.contents[0],
 										offer_dates_str, price_str, str(discount), offer_start_date, offer_end_date)
 			next_page += 1
-		driver.quit()
 
 		result = sorted(result.items(), key=lambda x: x[1][4], reverse=True)
 		filename_prefix = 'offers' + time.strftime("%y%m%d")
@@ -114,23 +115,28 @@ def scrap(argv=None):
 		with open(filename_prefix + all_suffix + '.csv', 'w', encoding="utf8") as f:
 			for item in result:
 				f.write(offer_to_str(item))
+				# print(item[1][5])
 
-		with open(filename_prefix + new_suffix + '.csv', 'w', encoding="utf8") as f:
-			for item in filter(lambda x: x[1][5] >= start_date, result):
-				f.write(offer_to_str(item))
+		# with open(filename_prefix + new_suffix + '.csv', 'w', encoding="utf8") as f:
+		# 	for item in filter(lambda x: x[1][5] >= start_date, result):
+		# 		f.write('+' + offer_to_str(item))
+		#
+		# with open(filename_prefix + ending_suffix + '.csv', 'w', encoding="utf8") as f:
+		# 	for item in filter(lambda x: x[1][6] <= ending_soon_date, result):
+		# 		f.write(offer_to_str(item))
 
-		with open(filename_prefix + ending_suffix + '.csv', 'w', encoding="utf8") as f:
-			for item in filter(lambda x: x[1][6] <= ending_soon_date, result):
-				f.write(offer_to_str(item))
-
-		with open(filename_prefix + new_suffix + '_or_' + ending_suffix + '.csv', 'w', encoding="utf8") as f:
+		products_to_autoadd_filename = filename_prefix + new_suffix + '_or_' + ending_suffix + '.csv'
+		with open(products_to_autoadd_filename, 'w', encoding="utf8") as f:
 			for item in filter(lambda x: x[1][5] >= start_date or x[1][6] <= ending_soon_date, result):
-				f.write(offer_to_str(item))
+				f.write('+' + offer_to_str(item))
+
+		add_selected([products_to_autoadd_filename], driver)
+		driver.quit()
 
 	except:
 		if driver:
 			driver.quit()
-		return sys.exc_info()
+		return sys.exc_traceback
 
 if __name__ == '__main__':
 	sys.exit(scrap(sys.argv))
