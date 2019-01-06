@@ -1,5 +1,6 @@
 __author__ = 'Nathalie'
 
+from pickle_ignored import get_ignored
 import credentials
 from add_selected_to_basket import add_selected
 import sys, time, re
@@ -51,6 +52,20 @@ def calculate_disc(offer, price):
 		new_price = norm(re.search('now £?(\d+(\.\d+|p)?)', offer).group(1))
 		return round(1 - new_price / old_price, 2), price
 	return None, price
+
+
+def filter_out(promos):
+	ignore_discount = 0.11
+	ignore_offers, ignore_products, not_intr_offers = get_ignored()
+	filtered = {}
+	for product in promos:
+		if product in ignore_products or\
+				promos[product][1] in ignore_offers or \
+				(product in not_intr_offers and promos[product][7] >= not_intr_offers[product]) or\
+				promos[product][4] <= ignore_discount:
+			continue
+		filtered[product] = promos[product]
+	return filtered
 
 
 def scrap(argv=None):
@@ -105,6 +120,8 @@ def scrap(argv=None):
 			#                           offer_start_date : datetime, offer_end_date : datetime, price_offered : float)}
 			next_page += 1
 		driver.quit()
+
+		result = filter_out(result)
 
 		result = sorted(result.items(), key=lambda x: x[1][4], reverse=True)
 		filename_prefix = 'offers' + time.strftime("%y%m%d")
