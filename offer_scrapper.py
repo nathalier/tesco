@@ -119,7 +119,6 @@ def scrap(argv=None):
 			#                           price_str : str, discount : float,
 			#                           offer_start_date : datetime, offer_end_date : datetime, price_offered : float)}
 			next_page += 1
-		driver.quit()
 
 		result = filter_out(result)
 
@@ -149,10 +148,15 @@ def scrap(argv=None):
 			for item in filter(lambda x: x[1][5] >= start_date or x[1][6] <= ending_soon_date, result):
 				f.write(offer_to_str(item))
 
+		products_to_autoadd_filename = filename_prefix + all_suffix + '.csv'
+		add_selected([products_to_autoadd_filename], driver)
+
 	except:
+		return sys.exc_info()
+
+	finally:
 		if driver:
 			driver.quit()
-		return sys.exc_info()
 
 if __name__ == '__main__':
 	sys.exit(scrap(sys.argv))
