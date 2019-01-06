@@ -21,6 +21,8 @@ def calculate_disc(offer, price):
 	def norm(p):
 		if p[-1] == 'p':
 			return float(p[:-1]) / 100
+		elif p[0] == '£':
+			return float(p[1:])
 		else:
 			return float(p)
 
@@ -93,11 +95,14 @@ def scrap(argv=None):
 					offer_end_date = datetime.strptime(re.search('until (\d{2}/\d{2}/\d{4})',
 																offer_dates_str).group(1), date_format).date()
 					price_str = item.find_next(attrs={"class": "value"}).contents[0]
-					discount, _ = calculate_disc(offer.contents[0], price_str)
+					discount, price_offered = calculate_disc(offer.contents[0], price_str)
 					item_code = re.search('/(\d+)$', item['href']).group(1)
 					if item_code:
-						result[item_code] = (item.contents[0], offer.contents[0],
-										offer_dates_str, price_str, str(discount), offer_start_date, offer_end_date)
+						result[item_code] = (str(item.contents[0]), str(offer.contents[0]), offer_dates_str,
+										str(price_str), discount, offer_start_date, offer_end_date, price_offered)
+			# 			format:  {"item_code": (name_of_item : str, name_of_offer : str, offer_dates_str : str,
+			#                           price_str : str, discount : float,
+			#                           offer_start_date : datetime, offer_end_date : datetime, price_offered : float)}
 			next_page += 1
 		driver.quit()
 
@@ -108,7 +113,7 @@ def scrap(argv=None):
 		ending_suffix = '_ending'
 
 		def offer_to_str(item):
-			return item[1][4] + " ::: " + item[1][1] + " ::: " + item[1][3] + " ::: " + \
+			return str(item[1][4]) + " ::: " + item[1][1] + " ::: " + item[1][3] + " ::: " + \
 					item[1][2] + " ::: " + item[1][0] + " ::: " + item[0] + '\n'
 
 		with open(filename_prefix + all_suffix + '.csv', 'w', encoding="utf8") as f:
