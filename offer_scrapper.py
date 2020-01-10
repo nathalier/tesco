@@ -51,7 +51,7 @@ def calculate_disc(offer, price):
 		old_price = norm(re.search('was £?(\d+(\.\d+|p)?)', offer).group(1))
 		new_price = norm(re.search('now £?(\d+(\.\d+|p)?)', offer).group(1))
 		return round(1 - new_price / old_price, 2), price
-	return None, price
+	return 0, price
 
 
 def filter_out(promos):
