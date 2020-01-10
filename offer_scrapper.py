@@ -2,6 +2,7 @@ __author__ = 'Nathalie'
 
 from pickle_ignored import get_ignored
 import credentials
+from collections import namedtuple
 from add_selected_to_basket import add_selected
 import sys, time, re
 from datetime import datetime, date, timedelta
@@ -90,6 +91,8 @@ def scrap(argv=None):
 		time.sleep(3)
 
 		result = {}
+		Offer = namedtuple('Offer', 'item_name, offer_name, offer_dates_str, price_str, discount, '
+									'offer_start_date, offer_end_date, price_offered, item_code')
 		next_page = 1
 		while True:
 			driver.get(fav_url + '?page=' + str(next_page))
@@ -113,24 +116,31 @@ def scrap(argv=None):
 					discount, price_offered = calculate_disc(offer.contents[0], price_str)
 					item_code = re.search('/(\d+)$', item['href']).group(1)
 					if item_code:
-						result[item_code] = (str(item.contents[0]), str(offer.contents[0]), offer_dates_str,
-										str(price_str), discount, offer_start_date, offer_end_date, price_offered)
-			# 			format:  {"item_code": (name_of_item : str, name_of_offer : str, offer_dates_str : str,
-			#                           price_str : str, discount : float,
-			#                           offer_start_date : datetime, offer_end_date : datetime, price_offered : float)}
+						# 			format:  {"item_code": (name_of_item : str, name_of_offer : str, offer_dates_str : str,
+						#                           price_str : str, discount : float,
+						#                           offer_start_date : datetime, offer_end_date : datetime,
+						#                           price_offered : float, item_code : str)}
+						result[item_code] = Offer(item_name=str(item.contents[0]), offer_name=str(offer.contents[0]),
+													offer_dates_str=offer_dates_str, price_str=str(price_str),
+													discount=discount, offer_start_date=offer_start_date,
+													offer_end_date=offer_end_date, price_offered=price_offered,
+													item_code=item_code)
+						if discount is None:
+							print(f'no discount for {item.contents[0]} : {item_code} offer')
+
 			next_page += 1
 
 		result = filter_out(result)
 
-		result = sorted(result.items(), key=lambda x: x[1][4], reverse=True)
+		result = sorted(result.values(), key=lambda x: x.discount, reverse=True)
 		filename_prefix = 'offers' + time.strftime("%y%m%d")
 		all_suffix = '_all'
 		new_suffix = '_after_' + start_date.strftime("%m%d")
 		ending_suffix = '_ending'
 
 		def offer_to_str(item):
-			return str(item[1][4]) + " ::: " + item[1][1] + " ::: " + item[1][3] + " ::: " + \
-					item[1][2] + " ::: " + item[1][0] + " ::: " + item[0] + '\n'
+			return str(item.discount) + " ::: " + item.offer_name + " ::: " + item.price_str + " ::: " + \
+					item.offer_dates_str + " ::: " + item.item_name + " ::: " + item.item_code + '\n'
 
 		with open(filename_prefix + all_suffix + '.csv', 'w', encoding="utf8") as f:
 			for item in result:
