@@ -1,7 +1,7 @@
 import sys
 import re
 
-from offer_scrapper import calculate_disc
+from offer_scrapper import calculate_discount
 from pickle_ignored import get_ignored, save_ignored
 
 
@@ -21,7 +21,7 @@ def filter_files(files):
 					elif interested == '--':
 						ignore_products.add(prod_id)
 					elif interested == '-':
-						price_offered = calculate_disc(offer_text, price_shown)[1]
+						price_offered = calculate_discount(offer_text, price_shown)[1]
 						if prod_id not in not_intr_offers:
 							not_intr_offers[prod_id] = price_offered
 						elif price_offered < not_intr_offers[prod_id]:

@@ -19,7 +19,7 @@ account = credentials.account
 passw = credentials.passw
 
 
-def calculate_disc(offer, price):
+def calculate_discount(offer, price):
 	def norm(p):
 		if p[-1] == 'p':
 			return float(p[:-1]) / 100
@@ -81,14 +81,15 @@ def scrap(argv=None):
 	ending_soon_date = date.today() + timedelta(days=7)
 
 	try:
-		driver = webdriver.Firefox()
+		driver = webdriver.Chrome()
 		driver.get(login_url)
 		login_input = driver.find_element(By.ID, 'username')
 		login_input.send_keys(account)
 		login_passw = driver.find_element(By.ID, 'password')
 		login_passw.send_keys(passw)
+		time.sleep(1)
 		login_passw.send_keys(Keys.ENTER)
-		time.sleep(3)
+		time.sleep(7)
 
 		result = {}
 		Offer = namedtuple('Offer', 'item_name, offer_name, offer_dates_str, price_str, discount, '
@@ -98,13 +99,14 @@ def scrap(argv=None):
 			driver.get(fav_url + '?page=' + str(next_page))
 			html = driver.page_source
 			soup = BeautifulSoup(html)
-			soup.find_all()
 			product_list = soup.find('div', {"class": "results-page"})
-			items = product_list.find_all('a', {"class": "product-tile--title"})
+			items = product_list.find_all('a', {"data-auto": "product-tile--title"})
+			if not items:
+				items = product_list.find_all('a', {"class": "product-tile--title"})
 			if len(items) == 0:
 				break
 			for item in items:
-				offer_block = item.next_sibling.find("ul", {"class": "product-promotions"})
+				offer_block = item.parent.next_sibling.find("ul", {"class": "product-promotions"})
 				if offer_block:
 					offer = offer_block.find(attrs={"class": "offer-text"})
 					offer_dates_str = offer.next_sibling.contents[0].replace('Offer valid for delivery from ', '')
@@ -113,7 +115,7 @@ def scrap(argv=None):
 					offer_end_date = datetime.strptime(re.search('until (\d{2}/\d{2}/\d{4})',
 																offer_dates_str).group(1), date_format).date()
 					price_str = item.find_next(attrs={"class": "value"}).contents[0]
-					discount, price_offered = calculate_disc(offer.contents[0], price_str)
+					discount, price_offered = calculate_discount(offer.contents[0], price_str)
 					item_code = re.search('/(\d+)$', item['href']).group(1)
 					if item_code:
 						# 			format:  {"item_code": (name_of_item : str, name_of_offer : str, offer_dates_str : str,
@@ -129,6 +131,16 @@ def scrap(argv=None):
 							print(f'no discount for {item.contents[0]} : {item_code} offer')
 
 			next_page += 1
+			# if next_page == 3:
+			# 	break
+
+		################
+		# import pickle
+		# pickle_f = 'temp.dat'
+		# with open(pickle_f, 'rb') as f:
+		# 	result = pickle.load(f)
+		################
+
 
 		result = filter_out(result)
 
@@ -144,25 +156,26 @@ def scrap(argv=None):
 
 		with open(filename_prefix + all_suffix + '.csv', 'w', encoding="utf8") as f:
 			for item in result:
-				f.write(offer_to_str(item))
+				f.write('+' + offer_to_str(item))
 
-		with open(filename_prefix + new_suffix + '.csv', 'w', encoding="utf8") as f:
-			for item in filter(lambda x: x[1][5] >= start_date, result):
-				f.write(offer_to_str(item))
-
-		with open(filename_prefix + ending_suffix + '.csv', 'w', encoding="utf8") as f:
-			for item in filter(lambda x: x[1][6] <= ending_soon_date, result):
-				f.write(offer_to_str(item))
-
-		with open(filename_prefix + new_suffix + '_or_' + ending_suffix + '.csv', 'w', encoding="utf8") as f:
-			for item in filter(lambda x: x[1][5] >= start_date or x[1][6] <= ending_soon_date, result):
-				f.write(offer_to_str(item))
+		# with open(filename_prefix + new_suffix + '.csv', 'w', encoding="utf8") as f:
+		# 	for item in filter(lambda x: x[1][5] >= start_date, result):
+		# 		f.write(offer_to_str(item))
+		#
+		# with open(filename_prefix + ending_suffix + '.csv', 'w', encoding="utf8") as f:
+		# 	for item in filter(lambda x: x[1][6] <= ending_soon_date, result):
+		# 		f.write(offer_to_str(item))
+		#
+		# with open(filename_prefix + new_suffix + '_or_' + ending_suffix + '.csv', 'w', encoding="utf8") as f:
+		# 	for item in filter(lambda x: x[1][5] >= start_date or x[1][6] <= ending_soon_date, result):
+		# 		f.write(offer_to_str(item))
 
 		products_to_autoadd_filename = filename_prefix + all_suffix + '.csv'
 		add_selected([products_to_autoadd_filename], driver)
 
-	except:
-		return sys.exc_info()
+	except Exception as e:
+		import traceback
+		traceback.print_exc()
 
 	finally:
 		if driver:
