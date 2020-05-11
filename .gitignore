@@ -2,3 +2,7 @@ offer*.csv
 ids*
 result*
 credentials.py
+*.json
+*.dat
+.idea/*
+__pycache__/*

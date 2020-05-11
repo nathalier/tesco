@@ -2,7 +2,7 @@ import sys
 import re
 
 from offer_scrapper import calculate_discount
-from pickle_ignored import get_ignored, save_ignored
+from ignored_io import get_ignored, save_ignored
 
 
 def filter_files(files):
@@ -29,7 +29,7 @@ def filter_files(files):
 				except AttributeError:
 					pass
 
-	save_ignored([ignore_offers, ignore_products, not_intr_offers])
+	save_ignored(ignore_offers, ignore_products, not_intr_offers)
 
 
 if __name__ == '__main__':

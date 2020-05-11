@@ -1,6 +1,6 @@
 __author__ = 'Nathalie'
 
-from pickle_ignored import get_ignored
+from ignored_io import get_ignored
 import credentials
 from collections import namedtuple
 from add_selected_to_basket import add_selected
