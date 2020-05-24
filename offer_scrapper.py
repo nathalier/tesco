@@ -19,8 +19,9 @@ account = credentials.account
 passw = credentials.passw
 
 
-def calculate_discount(offer, price):
+def calculate_discount(offer: str, price: str):
 	def norm(p):
+		""" returns float value of a price in pounds"""
 		if p[-1] == 'p':
 			return float(p[:-1]) / 100
 		elif p[0] == '£':
@@ -34,24 +35,23 @@ def calculate_discount(offer, price):
 		result = re.search('any (\d) for (\d)', offer)
 		q1, q2 = float(result.group(1)), float(result.group(2))
 		discount = 1 - q2 / q1
-		new_price = discount * price
-		return discount, new_price
+		return discount, price
 	elif 'for' in offer:
 		result = re.search('(\d+) for £?(\d+(\.\d+|p)?)', offer)
 		if result:
 			quantity = int(result.group(1))
 			total_price = result.group(2)
 			price_per_item = norm(total_price) / quantity
-			return round(1 - price_per_item / price, 2), price_per_item
+			return round(1 - price_per_item / price, 2), price
 	elif re.search('buy (\d) get (\d) free', offer):
 		result = re.search('buy (\d) get (\d) free', offer)
 		q1, q2 = float(result.group(1)), float(result.group(2))
 		discount = 1 - q1/(q1 + q2)
-		return discount, discount * price
+		return discount, price
 	elif re.search('was.*now', offer):
 		old_price = norm(re.search('was £?(\d+(\.\d+|p)?)', offer).group(1))
 		new_price = norm(re.search('now £?(\d+(\.\d+|p)?)', offer).group(1))
-		return round(1 - new_price / old_price, 2), price
+		return round(1 - new_price / old_price, 2), old_price
 	return 0, price
 
 
