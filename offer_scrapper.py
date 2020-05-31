@@ -69,19 +69,11 @@ def filter_out(promos):
 	return filtered
 
 
-def scrap(argv=None):
+def scrap():
 	date_format = '%d/%m/%Y'
-	if argv and len(argv) > 1:
-		try:
-			start_date = datetime.strptime(argv[1], date_format).date()
-		except:
-			pass
-	if len(argv) <= 1 or not start_date:
-			start_date = date.today() - timedelta(days=5)
-	ending_soon_date = date.today() + timedelta(days=7)
 
 	try:
-		driver = webdriver.Chrome()
+		driver = webdriver.Firefox()
 		driver.get(login_url)
 		login_input = driver.find_element(By.ID, 'username')
 		login_input.send_keys(account)
@@ -100,14 +92,15 @@ def scrap(argv=None):
 			html = driver.page_source
 			soup = BeautifulSoup(html)
 			product_list = soup.find('div', {"class": "results-page"})
-			items = product_list.find_all('a', {"data-auto": "product-tile--title"})
-			if not items:
-				items = product_list.find_all('a', {"class": "product-tile--title"})
+			items = product_list.find_all('li', {'class': 'product-list--list-item'})
 			if len(items) == 0:
 				break
 			for item in items:
-				offer_block = item.parent.next_sibling.find("ul", {"class": "product-promotions"})
+				product = item.find('div', {'id': True})
+				offer_block = product.find("ul", {"class": "product-promotions"})
 				if offer_block:
+					prod_a = product.find('a', {"data-auto": "product-tile--title"}) or \
+					         product.find('a', {"class": "product-tile--title"})
 					offer = offer_block.find(attrs={"class": "offer-text"})
 					offer_dates_str = offer.next_sibling.contents[0].replace('Offer valid for delivery from ', '')
 					offer_start_date = datetime.strptime(re.match('(\d{2}/\d{2}/\d{4})',
@@ -116,13 +109,9 @@ def scrap(argv=None):
 																offer_dates_str).group(1), date_format).date()
 					price_str = item.find_next(attrs={"class": "value"}).contents[0]
 					discount, price_offered = calculate_discount(offer.contents[0], price_str)
-					item_code = re.search('/(\d+)$', item['href']).group(1)
+					item_code = product.get('data-auto-id')
 					if item_code:
-						# 			format:  {"item_code": (name_of_item : str, name_of_offer : str, offer_dates_str : str,
-						#                           price_str : str, discount : float,
-						#                           offer_start_date : datetime, offer_end_date : datetime,
-						#                           price_offered : float, item_code : str)}
-						result[item_code] = Offer(item_name=str(item.contents[0]), offer_name=str(offer.contents[0]),
+						result[item_code] = Offer(item_name=str(prod_a.contents[0]), offer_name=str(offer.contents[0]),
 													offer_dates_str=offer_dates_str, price_str=str(price_str),
 													discount=discount, offer_start_date=offer_start_date,
 													offer_end_date=offer_end_date, price_offered=price_offered,
@@ -131,46 +120,30 @@ def scrap(argv=None):
 							print(f'no discount for {item.contents[0]} : {item_code} offer')
 
 			next_page += 1
-			# if next_page == 3:
-			# 	break
 
-		################
-		# import pickle
-		# pickle_f = 'temp.dat'
-		# with open(pickle_f, 'rb') as f:
-		# 	result = pickle.load(f)
-		################
-
-
-		result = filter_out(result)
-
-		result = sorted(result.values(), key=lambda x: x.discount, reverse=True)
+		result_to_write = sorted(result.values(), key=lambda x: x.discount, reverse=True)
 		filename_prefix = 'offers' + time.strftime("%y%m%d")
-		all_suffix = '_all'
-		new_suffix = '_after_' + start_date.strftime("%m%d")
-		ending_suffix = '_ending'
+		suffix = '_all'
 
 		def offer_to_str(item):
 			return str(item.discount) + " ::: " + item.offer_name + " ::: " + item.price_str + " ::: " + \
 					item.offer_dates_str + " ::: " + item.item_name + " ::: " + item.item_code + '\n'
 
-		with open(filename_prefix + all_suffix + '.csv', 'w', encoding="utf8") as f:
-			for item in result:
+		with open(filename_prefix + suffix + '.csv', 'w', encoding="utf8") as f:
+			for item in result_to_write:
 				f.write('+' + offer_to_str(item))
 
-		# with open(filename_prefix + new_suffix + '.csv', 'w', encoding="utf8") as f:
-		# 	for item in filter(lambda x: x[1][5] >= start_date, result):
-		# 		f.write(offer_to_str(item))
-		#
-		# with open(filename_prefix + ending_suffix + '.csv', 'w', encoding="utf8") as f:
-		# 	for item in filter(lambda x: x[1][6] <= ending_soon_date, result):
-		# 		f.write(offer_to_str(item))
-		#
-		# with open(filename_prefix + new_suffix + '_or_' + ending_suffix + '.csv', 'w', encoding="utf8") as f:
-		# 	for item in filter(lambda x: x[1][5] >= start_date or x[1][6] <= ending_soon_date, result):
-		# 		f.write(offer_to_str(item))
 
-		products_to_autoadd_filename = filename_prefix + all_suffix + '.csv'
+		result = filter_out(result)
+		result_to_write = sorted(result.values(), key=lambda x: x.discount, reverse=True)
+		suffix = '_filtered'
+
+		with open(filename_prefix + suffix + '.csv', 'w', encoding="utf8") as f:
+			for item in result_to_write:
+				f.write('+' + offer_to_str(item))
+
+
+		products_to_autoadd_filename = filename_prefix + suffix + '.csv'
 		add_selected([products_to_autoadd_filename], driver)
 
 	except Exception as e:
