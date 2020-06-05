@@ -123,7 +123,7 @@ def scrap():
 
 		result_to_write = sorted(result.values(), key=lambda x: x.discount, reverse=True)
 		filename_prefix = 'offers' + time.strftime("%y%m%d")
-		suffix = '_all'
+		suffix = '_allfav'
 
 		def offer_to_str(item):
 			return str(item.discount) + " ::: " + item.offer_name + " ::: " + item.price_str + " ::: " + \
@@ -155,4 +155,4 @@ def scrap():
 			driver.quit()
 
 if __name__ == '__main__':
-	sys.exit(scrap(sys.argv))
+	sys.exit(scrap())
