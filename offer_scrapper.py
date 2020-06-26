@@ -97,17 +97,19 @@ def scrap():
 				break
 			for item in items:
 				product = item.find('div', {'id': True})
-				offer_block = product.find("ul", {"class": "product-promotions"})
+				offer_block = product.find("li", {"class": "product-promotion"})
 				if offer_block:
 					prod_a = product.find('a', {"data-auto": "product-tile--title"}) or \
 					         product.find('a', {"class": "product-tile--title"})
 					offer = offer_block.find(attrs={"class": "offer-text"})
-					offer_dates_str = offer.next_sibling.contents[0].replace('Offer valid for delivery from ', '')
+					offer_dates = offer_block.find(attrs={"class": "dates"})
+					offer_dates_str = offer_dates.contents[0].replace('Offer valid for delivery from ', '')
 					offer_start_date = datetime.strptime(re.match('(\d{2}/\d{2}/\d{4})',
 																offer_dates_str).group(1), date_format).date()
 					offer_end_date = datetime.strptime(re.search('until (\d{2}/\d{2}/\d{4})',
 																offer_dates_str).group(1), date_format).date()
-					price_str = item.find_next(attrs={"class": "value"}).contents[0]
+					price_str = item.find('div', {'class': 'price-per-sellable-unit'}).\
+						find(attrs={"class": "value"}).contents[0]
 					discount, price_offered = calculate_discount(offer.contents[0], price_str)
 					item_code = product.get('data-auto-id')
 					if item_code:
@@ -118,7 +120,6 @@ def scrap():
 													item_code=item_code)
 						if discount is None:
 							print(f'no discount for {item.contents[0]} : {item_code} offer')
-
 			next_page += 1
 
 		result_to_write = sorted(result.values(), key=lambda x: x.discount, reverse=True)
